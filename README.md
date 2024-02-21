@@ -3,13 +3,13 @@ This tool assists with batch uploading address data to OpenStreetMap. Currently 
 
 ## Todo
 - Support for multifamily units
-- Generalize for other datasets and formats
+- Reconcile addresses that already exist in OSM
+- Manual user review for non-confident matches
 - Match street names to physically nearest name match
+- Generalize for other datasets and address formats
 - Support for multiple cities, states, and countries
 - OSM account Oauth support
 - Automatically generate and upload OSM changeset
-- Manual user review for non-confident matches
-- Support for other address formats
 - GUI?
 
 ## **Installation**
