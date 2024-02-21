@@ -18,9 +18,9 @@ overpass = Overpass()
 shapefile_path = "./stage/MAT-filtered.shp"
 gdf = gpd.read_file(shapefile_path)
 
-streets = {} # Streets in the area, keyed by id
+all_streets = {} # Streets in the area, keyed by id
 street_names = [] # Flat list of street names
-buildings = {} # Buildings in the area, keyed by id
+all_buildings = {} # Buildings in the area, keyed by id
 loaded_tiles = [] # (x, y) coordinates of tiles that have already been loaded
 
 def find_tile_coordinates_for_point(lat, lng):
@@ -64,23 +64,23 @@ def load_data(lat, lng):
   buildings, streets = fetch_tile(x, y)
   
   for building in buildings:
-    buildings[building.id()] = building
+    all_buildings[building.id()] = building
   
   for street in streets:
-    streets[street.id()] = street
+    all_streets[street.id()] = street
     
-  generate_street_name_list(streets)
+  generate_street_name_list()
   
   loaded_tiles.append((x, y))
 
 def parse_address_number(address):
   return int(float(address))
 
-def generate_street_name_list(streets):
-  street_names = []
-  for street in streets:
+def generate_street_name_list():
+  street_names.clear()
+  for street in all_streets.values():
     tags = street.tags()
-    tiger = tags.get('tiger:name_base', tags.get('name', tags.get('ref', '')))
+    street_name = tags.get('tiger:name_base', tags.get('name', tags.get('ref', '')))
     street_names.append(street_name)
     
 # Case-insensitive version of difflib.get_close_matches
@@ -91,12 +91,13 @@ def get_close_matches_icase(word, possibilities, *args, **kwargs):
   return [lpos[m] for m in lmatches]
 
 def match_street(street_name):
-  return difflib.get_close_matches_icase(street_name, street_names)[0]
+  return get_close_matches_icase(street_name, street_names)[0]
 
 addresses = gdf.iterfeatures()
 
 # address = next(addresses)
 for address in addresses:
+
   properties = address['properties']
   lat = properties['latitude']
   lng = properties['longitude']
@@ -106,5 +107,7 @@ for address in addresses:
     for j in range(-1, 2):
       load_data(lat + i, lng + j)
 
-  address_number = parse_address_number(properties['txt_number'])
-  street = match_street(properties['txt_street'])
+  address_number = parse_address_number(properties['txt_street'])
+  street = match_street(properties['nme_street'] + ' ' + properties['cde_roadwa'])
+
+  print(f"Address: {address_number} {street}")
