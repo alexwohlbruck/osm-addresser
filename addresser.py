@@ -1,3 +1,4 @@
+import argparse
 from bs4 import BeautifulSoup
 import difflib
 import geopandas as gpd
@@ -11,24 +12,16 @@ from math import pi, radians, log, sin, cos, tan, atan, atan2, sinh, degrees, sq
 # We will check if the address exists near the data point, and if it doesn't we will create it
 # Within some amount of margin of error, we will prompt the user to confirm the address if needed
 
-TILE_ZOOM_LEVEL = 14
+TILE_ZOOM_LEVEL = 14  
 
 api = Api()
 overpass = Overpass()
-shapefile_path = "./stage/MAT-filtered.shp"
-city = "Charlotte"
-state = "NC"
 
-gdf = gpd.read_file(shapefile_path)
 
 all_buildings = {} # Buildings in the area, keyed by id
 all_streets = {} # Streets in the area, keyed by id
 street_names = [] # Flat list of street names
 buildings = [] # Flat list of buildings
-known_zips = []
-known_cities = []
-known_states = []
-known_countries = []
 loaded_tiles = [] # (x, y) coordinates of tiles that have already been loaded
 
 def find_tile_coordinates_for_point(lat, lng):
@@ -154,28 +147,74 @@ def find_nearest_building(lat, lng):
       
   return nearest_building
 
-addresses = gdf.iterfeatures()
+def ingest_known_addresses(shapefile_path):
+  gdf = gpd.read_file(shapefile_path)
+  return gdf.iterfeatures()
 
-address = next(addresses)
+def link_addresses_to_buildings(addresses, city, state):
+  results = []
+  for address in addresses:
 
-for address in addresses:
+    properties = address['properties']
+    lat = properties['latitude']
+    lng = properties['longitude']
 
-  properties = address['properties']
-  lat = properties['latitude']
-  lng = properties['longitude']
+    x, y = find_tile_coordinates_for_point(lat, lng)
+    load_data(x, y)
+    # load_surrounding_tiles(x, y)
 
-  pp(properties)
+    address_number = str(parse_address_number(properties['txt_street']))
+    street = match_street(properties['nme_street'] + ' ' + properties['cde_roadwa'])
+    zip_code = properties['cde_zip1']
+    
+    full_address = f"{address_number} {street}, {city}, {state} {zip_code}"
+
+    building = find_nearest_building(lat, lng)
+
+    results.append({
+      'address': {
+        'number': address_number,
+        'street': street,
+        'city': city,
+        'state': state,
+        'zip': zip_code
+      },
+      'building': building
+    })
+    print(f"ID: {building['id']}, Address: {full_address}")
+  return results
+
+parser = argparse.ArgumentParser(
+  prog='Osm Addresser',
+  description='Easily link your municipal address data to OpenStreetMap buildings',
+)
+
+parser.add_argument(
+  'shapefile_path',
+  type=str,
+  help='The path to the shapefile containing the address data'
+)
+
+parser.add_argument(
+  'city',
+  type=str,
+  help='The city of the address data. This should match the city name as it appears in OSM'
+)
+
+parser.add_argument(
+  'state',
+  type=str,
+  help='The state of the address data (e.g. NC, SC, etc.). This should match the state name as it appears in OSM'
+)
+
+def prompt_user():
+  args = parser.parse_args()
+  return args.shapefile_path, args.city, args.state
+
+def main():
+  shapefile_path, city, state = prompt_user()
+  addresses = ingest_known_addresses(shapefile_path)
+  results = link_addresses_to_buildings(addresses, city, state)
   
-  x, y = find_tile_coordinates_for_point(lat, lng)
-  load_data(x, y)
-  # load_surrounding_tiles(x, y)
-
-  address_number = str(parse_address_number(properties['txt_street']))
-  street = match_street(properties['nme_street'] + ' ' + properties['cde_roadwa'])
-  zip_code = properties['cde_zip1']
-  
-  full_address = f"{address_number} {street}, {city}, {state} {zip_code}"
-
-  building = find_nearest_building(lat, lng)
-
-  print(f"ID: {building['id']}, Address: {full_address}")
+if __name__ == '__main__':
+  main()
