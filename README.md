@@ -35,7 +35,7 @@ pip3 install -r requirements.txt
 ```
 
 ## Usage
-1. Download your address dataset. As of now, this must be a shapefile with a format that matches the Mecklenburg County GIS Master Address Table. You can download a copy [here](https://maps.mecknc.gov/openmapping/data.html).
+1. Download your address dataset. As of now, this must be a shapefile with a format that matches the Mecklenburg County GIS Master Address Table. In the `stage` directory I have included a sample dataset with a only few dozen addresses. You can download a full copy [here](https://maps.mecknc.gov/openmapping/data.html).
 2. Unzip the downloaded file and place all unzipped files in the `stage` directory. Replace existing files if necessary.
 3. Activate the virtual environment
 ```bash
